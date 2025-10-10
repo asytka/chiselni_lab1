@@ -37,11 +37,12 @@ int main() {
     double T = 6.0;
     double y = 10.0;
     double tau = 0.1;        // початковий крок
-    double eps = 1e-5;
+    double eps = 1e-6;
     double epsM = 1e-6;
     double e_max = 0.0;
-
+    double kf = -1;
     double t = t0;
+    double v = y;
     const int p = 4;
 
     std::cout << std::fixed << std::setprecision(10);
@@ -58,18 +59,31 @@ int main() {
     while (true) {
         if (std::fabs(T - t) < epsM) break;
         if (t + tau > T) tau = T - t;
-
+        v = y;
+        double t1 = t;
         double w = rk4_step(t, y, tau);
         double y_half = rk4_step(t, y, tau / 2.0);
         y_half = rk4_step(t + tau / 2.0, y_half, tau / 2.0);
+        if (kf == 0) {
+            w = y_half;
+            y_half = v;
+            tau /= 2;
+            kf = 1;
+            continue;
+        }
 
-        double E = std::fabs(y_half - w) / std::max(1.0, std::fabs(y_half));
-        double tauH = std::min(5.0, std::max(0.1, 0.9 * std::pow(eps / (E + 1e-16), 1.0 / (p + 1))));
+        if (kf == 1) {
+            t += tau;
+            kf = 2;
+            continue;
+        }
+
+        double E = std::fabs(y_half - w) / (15.0) * std::max(1.0, std::fabs(y_half));
+        double tauH = 2 * tau * std::min(5.0, std::max(0.1, 0.9 * std::pow(eps / E, 1.0 / (5.0))));
 
         if (E <= eps) {
             t += tau;
-            y = y_half;
-
+            y = y_half + (y_half - w) / (15.0);
             double u_t = solution(t); //analitichniy
             double local_error = std::fabs(y - u_t);
             if (local_error > e_max) e_max = local_error;
@@ -79,15 +93,13 @@ int main() {
                 << " u(t)=" << u_t
                 << " |y-u(t)|=" << local_error << "\n";
 
-            tau *= tauH;
+            tau = tauH;
             steps++;
         }
         else {
             tau *= tauH;
-            if (tau < epsM) {
-                std::cerr << "Step too small, aborting.\n";
-                break;
-            }
+            t = t1;
+            y_half = v;
         }
 
         if (t >= T) break;
@@ -97,7 +109,6 @@ int main() {
 
     double uT = solution(T);
     double error = std::fabs(uT - y);
-    std::cout << "Global error: " << std::scientific << error << std::fixed << "\n";
     std::cout << "Number of steps: " << steps << "\n";
 
     return 0;
