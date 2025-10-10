@@ -37,7 +37,7 @@ int main() {
     double T = 6.0;
     double y = 10.0;
     double tau = 0.1;        // початковий крок
-    double eps = 1e-6;
+    double eps = 1e-10;
     double epsM = 1e-6;
     double e_max = 0.0;
     double kf = -1;
@@ -97,7 +97,7 @@ int main() {
             steps++;
         }
         else {
-            tau *= tauH;
+            tau *= 0.5;
             t = t1;
             y_half = v;
         }
